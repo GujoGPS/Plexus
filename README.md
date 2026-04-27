@@ -1,59 +1,61 @@
+```markdown
 # Plexus (WorkspaceHub) 🌌🧠
 
-**Plexus** é um ecossistema de produtividade pessoal inteligente, desenvolvido especificamente como um "cérebro externo" para auxiliar pessoas neurodivergentes (TEA/TDAH) a gerenciarem sua carga cognitiva com eficiência, foco e zero fricção.
+**Plexus** is an intelligent personal productivity ecosystem designed as an "external brain" to help neurodivergent individuals (ASD/ADHD) manage cognitive load with efficiency, focus, and zero friction.
 
-## 🚀 O que é o Plexus?
+## 🚀 Overview
 
-Diferente de ferramentas de produtividade genéricas, o Plexus foi construído para respeitar o funcionamento do cérebro neurodivergente. Ele integra o **Google Workspace** (Calendar, Drive, Notes e Tasks) em uma interface unificada, minimalista e altamente visual.
+Unlike generic productivity tools, Plexus was built to respect the neurodivergent brain. It integrates **Google Workspace** (Calendar, Drive, Notes, and Tasks) into a unified, minimalist, and highly visual interface.
 
-### ✨ Diferenciais para TEA/TDAH
+### ✨ Key Features for ASD/ADHD
 
-* **Modo Zen (Hyperfocus):** Interface limpa que elimina distrações visuais para foco profundo em escrita ou planejamento.
-* **Gestão de Energia (Baterias 🔋):** Classificação de tarefas pelo custo de energia mental (de 1 a 5), prevenindo o burnout.
-* **Pomodoro Flutuante:** Um timer sempre visível, com modo fantasma, para ajudar a quebrar a inércia e iniciar tarefas sem causar ansiedade.
-* **Sistema Espacial (Constelação):** Navegação visual intuitiva onde suas ideias flutuam, facilitando a organização espacial.
-* **Acessibilidade:** Suporte total para escrita manual (S-Pen) e atalhos de organização que diminuem a paralisia de escolha.
+* **Zen Mode (Hyperfocus):** A clean interface that eliminates visual distractions for deep focus on writing or planning.
+* **Energy Management (Batteries 🔋):** Categorize tasks by mental energy cost (1 to 5), helping to prevent burnout by visualizing daily capacity.
+* **Floating Pomodoro:** A persistent, draggable timer with "Ghost Mode" (transparency) and size scaling to help overcome task inertia without causing sensory overload.
+* **Galaxy View (Spatial System):** An intuitive visual navigation system where your notes float in a constellation, making spatial organization and retrieval effortless.
+* **Accessibility First:** Full support for handwriting (S-Pen) with pressure sensitivity and organizational shortcuts designed to reduce choice paralysis.
 
-## 🛠️ Arquitetura e Tecnologias
+## 🛠️ Tech Stack
 
 * **Frontend:** React 18 + TypeScript + Vite
-* **UI/UX:** Material UI (MUI) v5
-* **Gerenciamento de Estado:** Zustand
+* **UI/UX:** Material UI (MUI) v5 + Framer Motion
+* **State Management:** Zustand (Atomic persistence)
 * **Cloud & Auth:** Google Identity Services + Google Calendar API
-* **Persistência:** Google Drive API (Salvo de forma privada na `appDataFolder`)
-* **Inteligência Artificial:** Gemini 3.0 Flash (para sumarização e refinamento de notas)
+* **Persistence:** Google Drive API (Private storage via `appDataFolder`)
+* **Artificial Intelligence:** Gemini 1.5 Flash (for summarization, task extraction, and note refinement)
 
-## 📦 Como Instalar e Rodar Localmente
+## 📦 Getting Started
 
-### 1. Pré-requisitos
-* Node.js instalado.
-* Uma conta no **Google Cloud Console** com um Client ID OAuth 2.0 configurado.
-* Uma chave de API do **Google AI Studio** (Gemini).
+### 1. Prerequisites
+* Node.js (Latest LTS)
+* A **Google Cloud Console** account with an OAuth 2.0 Client ID configured
+* A **Google AI Studio** (Gemini) API Key
 
-### 2. Instalação
-Clone o repositório e instale as dependências:
-\`\`\`bash
-git clone https://github.com/seu-usuario/plexus.git
-cd plexus
+### 2. Installation
+Clone the repository and install dependencies:
+```bash
+git clone [https://github.com/GujoGPS/Plexus.git](https://github.com/GujoGPS/Plexus.git)
+cd Plexus
 npm install
-\`\`\`
+```
 
-### 3. Configuração de Variáveis de Ambiente
-Crie um arquivo `.env` na raiz do projeto contendo as suas chaves:
-\`\`\`env
-VITE_GOOGLE_CLIENT_ID=seu_client_id_do_google
-VITE_GEMINI_API_KEY=sua_chave_da_api_gemini
-\`\`\`
-*(Nota: O arquivo `.env` está no `.gitignore` e nunca deve ser commitado).*
+### 3. Environment Variables
+Create a `.env` file in the root directory with your credentials:
+```env
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+VITE_GEMINI_API_KEY=your_gemini_api_key
+```
 
-### 4. Rodando o App
-\`\`\`bash
+### 4. Running the App
+```bash
 npm run dev
-\`\`\`
+```
 
-## 🔒 Privacidade Absoluta
+## 🔒 Privacy & Security
 
-O Plexus foi desenhado para ser seguro por design. Seus dados (notas, tarefas, histórico) são salvos e criptografados exclusivamente na pasta oculta do seu próprio Google Drive. Nenhum servidor de terceiros armazena suas informações pessoais.
+Plexus is secure by design. Your data (notes, tasks, and history) is saved and encrypted exclusively within a hidden folder in **your own Google Drive**. No third-party servers ever store your personal information, and the developers have zero access to your content.
 
-## 📄 Licença
-Projeto criado para fins de acessibilidade cognitiva e uso pessoal.
+## 📄 License
+
+This project is for personal use and cognitive accessibility purposes. All rights reserved.
+```
