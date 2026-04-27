@@ -1,4 +1,3 @@
-```markdown
 # Plexus 🌌🧠
 
 **Plexus** is an intelligent personal productivity ecosystem designed as an "external brain" to help neurodivergent individuals (ASD/ADHD) manage cognitive load with efficiency, focus, and zero friction.
@@ -58,4 +57,3 @@ Plexus is secure by design. Your data (notes, tasks, and history) is saved and e
 ## 📄 License
 
 This project is for personal use and cognitive accessibility purposes. All rights reserved.
-```
