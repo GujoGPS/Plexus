@@ -1,0 +1,52 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto', 'Google Sans', system-ui, sans-serif;
+  background-color: #f8f9fa;
+  color: #202124;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.fc {
+  --fc-border-color: #e0e0e0;
+  --fc-button-bg-color: #00473F;
+  --fc-button-border-color: #00473F;
+  --fc-button-hover-bg-color: #002621;
+  --fc-button-hover-border-color: #002621;
+  --fc-button-active-bg-color: #00695d;
+  --fc-button-active-border-color: #00473F;
+  --fc-today-bg-color: rgba(0, 71, 63, 0.1);
+  --fc-event-bg-color: #00473F;
+  --fc-event-border-color: #00473F;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.fc .fc-button {
+  font-weight: 500;
+  text-transform: capitalize;
+}
