@@ -1,4 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { Settings as SettingsIcon, VpnKey } from '@mui/icons-material';
+import { useSettingsStore } from './stores/settingsStore';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 import {
   Box,
   Button,
@@ -292,68 +295,100 @@ const TopHeader: React.FC<{
   const currentNavItem = NAV_ITEMS.find((item) => item.id === activeView);
   const { mode, toggleTheme } = useThemeStore();
 
+  // Estados para o Modal de BYOK
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const geminiApiKey = useSettingsStore((state) => state.geminiApiKey);
+  const setGeminiApiKey = useSettingsStore((state) => state.setGeminiApiKey);
+  const [tempKey, setTempKey] = useState(geminiApiKey || '');
+
+  const handleOpenSettings = () => {
+    setTempKey(geminiApiKey || '');
+    setSettingsOpen(true);
+  };
+
+  const handleSaveSettings = () => {
+    setGeminiApiKey(tempKey.trim() || null);
+    setSettingsOpen(false);
+  };
+
   return (
-    <AppBar
-      position="sticky"
-      elevation={0}
-      sx={{
-        bgcolor: 'background.paper',
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-      }}
-    >
-      <Toolbar sx={{ px: { xs: 2, md: 3 } }}>
-        {/* Hamburger Menu Button - Mobile Only */}
-        <IconButton
-          onClick={onMenuClick}
-          color="inherit"
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            mr: 2,
-            color: 'text.secondary',
-          }}
-        >
-          <Menu />
-        </IconButton>
+    <>
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{ bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}
+      >
+        <Toolbar sx={{ px: { xs: 2, md: 3 } }}>
+          <IconButton onClick={onMenuClick} color="inherit" sx={{ display: { xs: 'block', md: 'none' }, mr: 2, color: 'text.secondary' }}>
+            <Menu />
+          </IconButton>
 
-        <Typography variant="h6" fontWeight={600} sx={{ flexGrow: 1 }}>
-          {currentNavItem?.label || 'Dashboard'}
-        </Typography>
+          <Typography variant="h6" fontWeight={600} sx={{ flexGrow: 1 }}>
+            {currentNavItem?.label || 'Dashboard'}
+          </Typography>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
-          <Tooltip title={mode === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}>
-            <IconButton
-              onClick={toggleTheme}
-              color="inherit"
-              size="small"
-              sx={{ color: 'text.primary' }}
-            >
-              {mode === 'light' ? <DarkMode /> : <LightMode />}
-            </IconButton>
-          </Tooltip>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
+            
+            {/* NOVO: Botão de Configurações */}
+            <Tooltip title="Configurações (BYOK)">
+              <IconButton onClick={handleOpenSettings} color="inherit" size="small" sx={{ color: 'text.primary' }}>
+                <SettingsIcon />
+              </IconButton>
+            </Tooltip>
 
-          <Box
-            sx={{
-              textAlign: 'right',
-              display: { xs: 'none', sm: 'block' },
-            }}
-          >
-            <Typography variant="body2" fontWeight={500} color="text.primary">
-              {user?.name || 'Usuário'}
-            </Typography>
-            <Typography variant="caption" color="text.primary" sx={{ opacity: 0.7 }}>
-              {user?.email || ''}
-            </Typography>
+            <Tooltip title={mode === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}>
+              <IconButton onClick={toggleTheme} color="inherit" size="small" sx={{ color: 'text.primary' }}>
+                {mode === 'light' ? <DarkMode /> : <LightMode />}
+              </IconButton>
+            </Tooltip>
+
+            <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
+              <Typography variant="body2" fontWeight={500} color="text.primary">{user?.name || 'Usuário'}</Typography>
+              <Typography variant="caption" color="text.primary" sx={{ opacity: 0.7 }}>{user?.email || ''}</Typography>
+            </Box>
+
+            <Tooltip title="Sair">
+              <IconButton onClick={onLogout} color="error" size="small">
+                <Logout />
+              </IconButton>
+            </Tooltip>
           </Box>
+        </Toolbar>
+      </AppBar>
 
-          <Tooltip title="Sair">
-            <IconButton onClick={onLogout} color="error" size="small">
-              <Logout />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Toolbar>
-    </AppBar>
+      {/* Modal de Configurações do Sistema */}
+      <Dialog open={settingsOpen} onClose={() => setSettingsOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 800 }}>
+          <SettingsIcon color="primary" /> Configurações do Plexus
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <Typography variant="subtitle2" color="primary" fontWeight={700}>
+              Inteligência Artificial (BYOK)
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+              Utilizamos o Google Gemini para gerar resumos em suas notas. Insira sua própria chave de API (Bring Your Own Key) para obter privacidade total e contornar os limites do sistema. A chave é salva apenas no seu navegador.
+            </Typography>
+            <TextField
+              label="Google Gemini API Key"
+              variant="outlined"
+              fullWidth
+              type="password"
+              value={tempKey}
+              onChange={(e) => setTempKey(e.target.value)}
+              placeholder="AIzaSy..."
+              InputProps={{
+                startAdornment: <VpnKey color="action" sx={{ mr: 1.5, fontSize: 20 }} />,
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setSettingsOpen(false)} color="inherit">Cancelar</Button>
+          <Button onClick={handleSaveSettings} variant="contained" disableElevation>Salvar Chave</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

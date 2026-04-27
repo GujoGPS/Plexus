@@ -1,3 +1,5 @@
+import { useSettingsStore } from '../stores/settingsStore';
+
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
 interface GeminiRequest {
@@ -23,10 +25,12 @@ interface GeminiResponse {
 }
 
 const callGeminiAPI = async (prompt: string): Promise<string> => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  // LÓGICA BYOK: Pega a chave do usuário primeiro, senão usa a do .env
+  const userKey = useSettingsStore.getState().geminiApiKey;
+  const apiKey = userKey || import.meta.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey) {
-    throw new Error('VITE_GEMINI_API_KEY não está configurada nas variáveis de ambiente.');
+    throw new Error('Chave de API do Gemini não configurada. Acesse as configurações (⚙️) no topo da tela para adicionar sua chave.');
   }
 
   const requestBody: GeminiRequest = {
@@ -52,6 +56,12 @@ const callGeminiAPI = async (prompt: string): Promise<string> => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      // Retorna uma mensagem amigável se a chave for inválida (Erro 400 ou 403)
+      if (response.status === 400 || response.status === 403) {
+         throw new Error('Chave de API inválida. Verifique suas configurações na engrenagem no topo da tela.');
+      }
+      
       throw new Error(
         `Erro na API do Gemini: ${response.status} - ${errorData.error?.message || response.statusText}`
       );
@@ -91,7 +101,8 @@ export const aiService = {
       return summary;
     } catch (error) {
       console.error('Erro ao resumir texto:', error);
-      throw error;
+      // Repassa o erro para a interface mostrar o Toast vermelho bonitinho
+      throw error; 
     }
   },
 
