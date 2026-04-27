@@ -20,7 +20,7 @@ const FloatingNotesToolbar: React.FC<FloatingNotesToolbarProps> = ({
   disabled,
   zIndex = 1300,
 }) => {
-  const draggableRef = useRef<{ offset: { x: number; y: number } } | null>(null);
+  // const draggableRef = useRef<{ offset: { x: number; y: number } } | null>(null);
 
   const handleResetPosition: DraggableEventHandler = (_e, handle) => {
     if (handle) {
@@ -39,7 +39,7 @@ const FloatingNotesToolbar: React.FC<FloatingNotesToolbarProps> = ({
     if (draggableEl) {
       const parent = draggableEl.parentElement;
       if (parent) {
-        const rect = parent.getBoundingClientRect();
+        // const rect = parent.getBoundingClientRect();
         const element = draggableEl.querySelector('.MuiPaper-root');
         if (element) {
           (element as HTMLElement).style.top = '80px';

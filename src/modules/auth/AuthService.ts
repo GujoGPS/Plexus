@@ -1,5 +1,6 @@
 import { User } from '../../types';
 
+declare const google: any;
 declare global {
   interface Window {
     google: typeof google;
@@ -20,7 +21,7 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 export class AuthService {
   private accessToken: string | null = null;
   private user: User | null = null;
-  private tokenClient: google.accounts.oauth2.TokenClient | null = null;
+  private tokenClient: any = null;
   private listeners: Set<(user: User | null) => void> = new Set();
 
   constructor() {
@@ -99,7 +100,7 @@ export class AuthService {
     this.tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES,
-      callback: (response) => {
+      callback: (response: any) => {
         if (response.access_token) {
           this.accessToken = response.access_token;
           this.fetchUserInfo();
@@ -163,7 +164,7 @@ export class AuthService {
   async refreshToken(): Promise<boolean> {
     return new Promise((resolve) => {
       if (this.tokenClient) {
-        this.tokenClient.callback = (response) => {
+        this.tokenClient.callback = (response: any) => {
           if (response.access_token) {
             this.accessToken = response.access_token;
             this.saveToken();
