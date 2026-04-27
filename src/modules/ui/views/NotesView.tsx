@@ -499,24 +499,40 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
     setToast({ open: true, msg: `Preset salvo!`, type: 'success' });
   };
 
-  const handleAI = async () => {
+const handleAI = async () => {
     const txt = richTextRef.current?.innerText || ''; 
     if (!txt.trim()) { setToast({ open: true, msg: 'A nota está vazia!', type: 'warning' }); return; }
     
     setAiLoading(true);
     try {
       const summary = await aiService.summarize(txt);
+      
       if (richTextRef.current) {
-        richTextRef.current.innerHTML += `<br/><br/><div style="background:#e3f2fd; padding:15px; border-radius:8px; border-left:4px solid #1976d2;"><strong>🤖 Resumo da IA:</strong><br/>${summary}</div>`;
+        // 1. Focamos no editor
+        richTextRef.current.focus();
+
+        // 2. Movemos o cursor do usuário para o final da nota
+        const range = document.createRange();
+        range.selectNodeContents(richTextRef.current);
+        range.collapse(false); // false = vai para o final
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        // 3. Criamos a caixa do resumo usando blockquote (muito mais fácil de apagar que div)
+        const aiHtml = `<br/><br/><blockquote style="background:#e3f2fd; padding:15px; border-radius:8px; border-left:4px solid #1976d2; margin: 0;"><strong>🤖 Resumo da IA:</strong><br/>${summary}</blockquote><br/>`;
+
+        // 4. Injetamos o HTML do jeito certo. Isso permite usar Ctrl+Z para desfazer!
+        document.execCommand('insertHTML', false, aiHtml);
       }
       setToast({ open: true, msg: 'IA analisou sua nota!', type: 'success' });
-    } catch {
-      setToast({ open: true, msg: 'Erro ao conectar com a IA.', type: 'error' });
+    } catch (err: any) {
+      setToast({ open: true, msg: err.message || 'Erro ao conectar com a IA.', type: 'error' });
     } finally {
       setAiLoading(false);
     }
   };
-
+  
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       
