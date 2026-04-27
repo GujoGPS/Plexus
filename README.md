@@ -1,5 +1,5 @@
 ```markdown
-# Plexus (WorkspaceHub) 🌌🧠
+# Plexus 🌌🧠
 
 **Plexus** is an intelligent personal productivity ecosystem designed as an "external brain" to help neurodivergent individuals (ASD/ADHD) manage cognitive load with efficiency, focus, and zero friction.
 
