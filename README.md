@@ -11,8 +11,6 @@ Unlike generic productivity tools, Plexus was built to respect the neurodivergen
 * **Zen Mode (Hyperfocus):** A clean interface that eliminates visual distractions for deep focus on writing or planning.
 * **Energy Management (Batteries 🔋):** Categorize tasks by mental energy cost (1 to 5), helping to prevent burnout by visualizing daily capacity.
 * **Floating Pomodoro:** A persistent, draggable timer with "Ghost Mode" (transparency) and size scaling to help overcome task inertia without causing sensory overload.
-* **Galaxy View (Spatial System):** An intuitive visual navigation system where your notes float in a constellation, making spatial organization and retrieval effortless.
-* **Accessibility First:** Full support for handwriting (S-Pen) with pressure sensitivity and organizational shortcuts designed to reduce choice paralysis.
 
 ## 🛠️ Tech Stack
 
@@ -21,7 +19,6 @@ Unlike generic productivity tools, Plexus was built to respect the neurodivergen
 * **State Management:** Zustand (Atomic persistence)
 * **Cloud & Auth:** Google Identity Services + Google Calendar API
 * **Persistence:** Google Drive API (Private storage via `appDataFolder`)
-* **Artificial Intelligence:** Gemini 1.5 Flash (for summarization, task extraction, and note refinement)
 
 ## 📦 Getting Started
 
@@ -52,7 +49,7 @@ npm run dev
 
 ## 🔒 Privacy & Security
 
-Plexus is secure by design. Your data (notes, tasks, and history) is saved and encrypted exclusively within a hidden folder in **your own Google Drive**. No third-party servers ever store your personal information, and the developers have zero access to your content.
+Plexus is secure by design. Your data (notes, tasks, and history) is saved and encrypted exclusively within a hidden folder in **your own Google Drive**. No third-party servers ever store your personal information, and the developer has zero access to your content.
 
 ## 📄 License
 
