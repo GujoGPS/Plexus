@@ -499,11 +499,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
     setToast({ open: true, msg: `Preset salvo!`, type: 'success' });
   };
 
-  const confirmTitleEdit = () => {
-    if (tempTitle.trim()) setTitle(tempTitle.trim());
-    setIsEditingTitle(false);
-  };
-
   const handleAI = async () => {
     const txt = richTextRef.current?.innerText || ''; 
     if (!txt.trim()) { setToast({ open: true, msg: 'A nota está vazia!', type: 'warning' }); return; }

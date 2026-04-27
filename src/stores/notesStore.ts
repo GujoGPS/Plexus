@@ -97,7 +97,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   selectNote: (id) => set({ selectedNoteId: id }),
 
-  restoreNote: async (historyEntryId) => {
-    // Mantido para compatibilidade de histórico futura
+  restoreNote: async () => {
   },
 }));

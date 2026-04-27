@@ -15,7 +15,6 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { CalendarEvent } from '../../../types';
 import { calendarService } from '../../../modules/calendar/CalendarService';
 import { useTasksStore } from '../../../stores/tasksStore';
 
@@ -64,7 +63,7 @@ const CalendarView: React.FC = () => {
   const [meetLinkDisplay, setMeetLinkDisplay] = useState<string | null>(null);
 
   // Integração com TasksStore
-  const { tasks, loadTasks: loadStoreTasks } = useTasksStore();
+  const { loadTasks: loadStoreTasks } = useTasksStore();
 
   const loadEvents = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Paper, Typography, TextField, FormControl, InputLabel, Button, Checkbox,
-  IconButton, Tabs, Tab, List, ListItem, ListItemIcon, ListItemText, Chip,
+  IconButton, Tabs, Tab, List, ListItem, ListItemIcon, Chip,
   CircularProgress, TextField as MuiTextField, InputAdornment, Accordion,
   AccordionSummary, AccordionDetails, Rating, Select, MenuItem, Autocomplete,
   Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, useTheme
@@ -59,7 +59,7 @@ interface TaskItemProps {
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({
-  task, index, onToggleComplete, onDelete, onEdit,
+  task, onToggleComplete, onDelete, onEdit,
   onAddSubtask, onToggleSubtask, onDeleteSubtask,
   provided, snapshot
 }) => {

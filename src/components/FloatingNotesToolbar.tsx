@@ -1,4 +1,3 @@
-import React, { useRef } from 'react';
 import { Paper, Box, IconButton, Tooltip, Typography } from '@mui/material';
 import Draggable, { DraggableEventHandler } from 'react-draggable';
 import SparkleIcon from '@mui/icons-material/AutoAwesome';
@@ -20,7 +19,6 @@ const FloatingNotesToolbar: React.FC<FloatingNotesToolbarProps> = ({
   disabled,
   zIndex = 1300,
 }) => {
-  // const draggableRef = useRef<{ offset: { x: number; y: number } } | null>(null);
 
   const handleResetPosition: DraggableEventHandler = (_e, handle) => {
     if (handle) {
@@ -39,7 +37,6 @@ const FloatingNotesToolbar: React.FC<FloatingNotesToolbarProps> = ({
     if (draggableEl) {
       const parent = draggableEl.parentElement;
       if (parent) {
-        // const rect = parent.getBoundingClientRect();
         const element = draggableEl.querySelector('.MuiPaper-root');
         if (element) {
           (element as HTMLElement).style.top = '80px';
