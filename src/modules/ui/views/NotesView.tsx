@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Paper, Typography, CircularProgress, IconButton, Grid, Card, CardActionArea,
   TextField, Tooltip, Divider, Button, Snackbar, Alert, FormControl, InputAdornment, Dialog,
-  DialogTitle, DialogContent, DialogActions, Menu, MenuItem, Select
+  DialogTitle, DialogContent, DialogActions, Menu, MenuItem, Select, Popover
 } from '@mui/material';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -40,9 +40,11 @@ import SubscriptIcon from '@mui/icons-material/Subscript';
 import SuperscriptIcon from '@mui/icons-material/Superscript';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import FormatColorTextIcon from '@mui/icons-material/FormatColorText';
+import BorderColorIcon from '@mui/icons-material/BorderColor';
 
 // ============================================================================
-// TIPTAP V3 SOTA & EXTENSIONS (Named Exports Corrigidos)
+// TIPTAP V3 SOTA & EXTENSIONS 
 // ============================================================================
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
@@ -52,7 +54,6 @@ import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
 import { TextAlign } from '@tiptap/extension-text-align';
 
-// Novas Extensões
 import { Link } from '@tiptap/extension-link';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
@@ -147,6 +148,10 @@ const PAGE_COLORS = [
   { id: 'sepia', hex: '#f4ecd8', name: 'Sépia' }
 ];
 
+// Paletas para os novos Popovers de Cor
+const PRESET_TEXT_COLORS = ['#000000', '#434343', '#666666', '#999999', '#cccccc', '#ea4335', '#fbbc04', '#34a853', '#4285f4', '#8e24aa', '#e67c73'];
+const PRESET_HIGHLIGHT_COLORS = ['#ffffff', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#ead1dc', '#ffff00', '#00ff00', '#00ffff'];
+
 interface NoteEditorProps {
   note: Note;
   onBack: () => void;
@@ -173,6 +178,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [toast, setToast] = useState({ open: false, msg: '', type: 'info' as any });
 
+  // Estados dos Menus de Cor
+  const [textColorAnchor, setTextColorAnchor] = useState<null | HTMLElement>(null);
+  const [highlightAnchor, setHighlightAnchor] = useState<null | HTMLElement>(null);
+
   // INICIALIZAÇÃO TIPTAP
   const editor = useEditor({
     extensions: [
@@ -195,7 +204,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
       TableHeader,
       TableCell,
       Image.configure({
-        allowBase64: true, // Permite Drag & Drop nativo!
+        allowBase64: true,
       }),
       TaskList,
       TaskItem.configure({
@@ -207,7 +216,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
         controls: false,
         nocookie: true,
       }),
-      TypographyExtension, // Aspas e travessões inteligentes
+      TypographyExtension,
     ],
     content: note.content || '',
     onSelectionUpdate: ({ editor }) => {
@@ -282,19 +291,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
     }
   };
 
-  // Funções de Interação (Links, Imagens, Videos)
   const setLink = () => {
     if (!editor) return;
     const previousUrl = editor.getAttributes('link').href;
     const url = window.prompt('URL do link:', previousUrl);
 
-    if (url === null) return; // Cancelado
+    if (url === null) return; 
 
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
-
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
@@ -321,8 +328,20 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       
-      {/* TOOLBAR PRINCIPAL */}
-      <Paper sx={{ p: 1, mb: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+      {/* TOOLBAR PRINCIPAL MESTRA (Sticky) */}
+      <Paper sx={{ 
+        p: 1, 
+        mb: 1, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2, 
+        flexWrap: 'wrap', 
+        borderRadius: 3, 
+        boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 110 // Fica sempre por cima
+      }}>
         <Tooltip title="Salvar e Voltar">
           <IconButton onClick={saveAndClose} color="primary" sx={{ bgcolor: 'primary.light', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.main' } }}>
             <ArrowBackIcon />
@@ -368,7 +387,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
         transition: 'background-color 0.3s',
       }}>
         
-        {/* TIPTAP HEADLESS TOOLBAR (Avançada SOTA) */}
+        {/* TIPTAP HEADLESS TOOLBAR (Sticky Logo Abaixo da Principal) */}
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -378,7 +397,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
           bgcolor: 'background.paper',
           borderBottom: '1px solid',
           borderColor: 'divider',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          position: 'sticky',
+          top: 0, 
+          zIndex: 100 // Fica fixa ao rolar o conteúdo
         }}>
           {editor && (
             <>
@@ -420,28 +442,67 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
                 />
               </Tooltip>
 
-              {/* CORES */}
+              {/* NOVOS COLOR PICKERS */}
               <Tooltip title="Cor do Texto">
-                <Box sx={{ display: 'flex', alignItems: 'center', height: 32, px: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                  <input
-                    type="color"
-                    onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
-                    value={editor.getAttributes('textStyle').color || '#000000'}
-                    style={{ border: 'none', background: 'transparent', width: 24, height: 24, cursor: 'pointer', padding: 0 }}
-                  />
-                </Box>
+                <IconButton 
+                  size="small" 
+                  onClick={(e) => setTextColorAnchor(e.currentTarget)}
+                  sx={{ color: editor.getAttributes('textStyle').color || 'inherit' }}
+                >
+                  <FormatColorTextIcon fontSize="small" />
+                </IconButton>
               </Tooltip>
+              <Popover
+                open={Boolean(textColorAnchor)}
+                anchorEl={textColorAnchor}
+                onClose={() => setTextColorAnchor(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              >
+                <Box sx={{ p: 1, display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 0.5, width: 180 }}>
+                  {PRESET_TEXT_COLORS.map(c => (
+                    <Tooltip title={c} key={c}>
+                      <Box onClick={() => { editor.chain().focus().setColor(c).run(); setTextColorAnchor(null); }} sx={{ width: 24, height: 24, bgcolor: c, cursor: 'pointer', border: '1px solid #ddd', borderRadius: 1, '&:hover': { transform: 'scale(1.1)' } }} />
+                    </Tooltip>
+                  ))}
+                  <Box sx={{ gridColumn: 'span 6', mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="caption">Outra:</Typography>
+                    <input type="color" onChange={(e) => editor.chain().focus().setColor(e.target.value).run()} style={{ width: '100%', height: 24, cursor: 'pointer', border: 'none', padding: 0 }} />
+                  </Box>
+                </Box>
+              </Popover>
 
               <Tooltip title="Cor de Fundo (Marca-texto)">
-                <Box sx={{ display: 'flex', alignItems: 'center', height: 32, px: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                  <input
-                    type="color"
-                    onChange={(e) => editor.chain().focus().toggleHighlight({ color: e.target.value }).run()}
-                    value={editor.getAttributes('highlight').color || '#ffffff'}
-                    style={{ border: 'none', background: 'transparent', width: 24, height: 24, cursor: 'pointer', padding: 0 }}
-                  />
-                </Box>
+                <IconButton 
+                  size="small" 
+                  onClick={(e) => setHighlightAnchor(e.currentTarget)}
+                  sx={{ color: editor.getAttributes('highlight').color || 'inherit' }}
+                >
+                  <BorderColorIcon fontSize="small" />
+                </IconButton>
               </Tooltip>
+              <Popover
+                open={Boolean(highlightAnchor)}
+                anchorEl={highlightAnchor}
+                onClose={() => setHighlightAnchor(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              >
+                <Box sx={{ p: 1, display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 0.5, width: 180 }}>
+                  <Tooltip title="Remover Fundo">
+                    <Box onClick={() => { editor.chain().focus().unsetHighlight().run(); setHighlightAnchor(null); }} sx={{ width: 24, height: 24, bgcolor: '#fff', cursor: 'pointer', border: '1px solid #ff0000', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography variant="caption" color="error">X</Typography>
+                    </Box>
+                  </Tooltip>
+                  {PRESET_HIGHLIGHT_COLORS.map(c => (
+                    <Tooltip title={c} key={c}>
+                      <Box onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setHighlightAnchor(null); }} sx={{ width: 24, height: 24, bgcolor: c, cursor: 'pointer', border: '1px solid #ddd', borderRadius: 1, '&:hover': { transform: 'scale(1.1)' } }} />
+                    </Tooltip>
+                  ))}
+                  <Box sx={{ gridColumn: 'span 6', mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="caption">Outra:</Typography>
+                    <input type="color" onChange={(e) => editor.chain().focus().toggleHighlight({ color: e.target.value }).run()} style={{ width: '100%', height: 24, cursor: 'pointer', border: 'none', padding: 0 }} />
+                  </Box>
+                </Box>
+              </Popover>
 
               <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
 
@@ -601,10 +662,16 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
             padding: '0.2rem 0.4rem',
             borderRadius: '0.25rem',
           },
-          /* Estilos para Checklists */
+          /* CSS CORRIGIDO: Identação real para Listas Padrão */
+          '& .tiptap ul, & .tiptap ol': {
+            paddingLeft: '24px',
+            marginTop: '0.5rem',
+            marginBottom: '0.5rem',
+          },
+          /* Estilos isolados para Checklists */
           '& .tiptap ul[data-type="taskList"]': {
             listStyle: 'none',
-            padding: 0,
+            paddingLeft: '0', 
           },
           '& .tiptap ul[data-type="taskList"] p': {
             margin: 0,
