@@ -16,23 +16,55 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 
+// Ícones de Formatação
 import FormatBoldIcon from '@mui/icons-material/FormatBold';
 import FormatItalicIcon from '@mui/icons-material/FormatItalic';
 import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined';
 import FormatStrikethroughIcon from '@mui/icons-material/FormatStrikethrough';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft';
+import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter';
+import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight';
+import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify';
+import FormatClearIcon from '@mui/icons-material/FormatClear';
+import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
+import CodeIcon from '@mui/icons-material/Code';
+
+// Novos Ícones
+import LinkIcon from '@mui/icons-material/Link';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
+import ImageIcon from '@mui/icons-material/Image';
+import ChecklistIcon from '@mui/icons-material/Checklist';
+import SubscriptIcon from '@mui/icons-material/Subscript';
+import SuperscriptIcon from '@mui/icons-material/Superscript';
+import YouTubeIcon from '@mui/icons-material/YouTube';
+import TableChartIcon from '@mui/icons-material/TableChart';
 
 // ============================================================================
-// TIPTAP V3 SOTA & EXTENSIONS
+// TIPTAP V3 SOTA & EXTENSIONS (Named Exports Corrigidos)
 // ============================================================================
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
+import { StarterKit } from '@tiptap/starter-kit';
+import { Underline } from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
-import Highlight from '@tiptap/extension-highlight';
-import TextAlign from '@tiptap/extension-text-align';
+import { Highlight } from '@tiptap/extension-highlight';
+import { TextAlign } from '@tiptap/extension-text-align';
+
+// Novas Extensões
+import { Link } from '@tiptap/extension-link';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { Image } from '@tiptap/extension-image';
+import { TaskList } from '@tiptap/extension-task-list';
+import { TaskItem } from '@tiptap/extension-task-item';
+import { Subscript } from '@tiptap/extension-subscript';
+import { Superscript } from '@tiptap/extension-superscript';
+import { Youtube } from '@tiptap/extension-youtube';
+import { Typography as TypographyExtension } from '@tiptap/extension-typography';
 
 // 1. Definição da Extensão Customizada SOTA v3 para Font Size inline
 export interface FontSizeOptions {
@@ -151,6 +183,31 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
       Color,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        defaultProtocol: 'https',
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Image.configure({
+        allowBase64: true, // Permite Drag & Drop nativo!
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      Subscript,
+      Superscript,
+      Youtube.configure({
+        controls: false,
+        nocookie: true,
+      }),
+      TypographyExtension, // Aspas e travessões inteligentes
     ],
     content: note.content || '',
     onSelectionUpdate: ({ editor }) => {
@@ -158,7 +215,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
       if (size) {
         setCustomFontSize(size.replace('px', ''));
       } else {
-        setCustomFontSize('16'); // Fallback visual
+        setCustomFontSize('16'); 
       }
     },
   });
@@ -175,7 +232,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
     onSave(note.id, {
       title,
       content: htmlContent,
-      canvasData: '', // Limpando legado do canvas
+      canvasData: '', 
       linkedTaskId,
       pageColor
     });
@@ -222,6 +279,42 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
       editor.chain().focus().setFontSize(`${customFontSize}px`).run();
     } else {
       editor.chain().focus().unsetFontSize().run();
+    }
+  };
+
+  // Funções de Interação (Links, Imagens, Videos)
+  const setLink = () => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('URL do link:', previousUrl);
+
+    if (url === null) return; // Cancelado
+
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  };
+
+  const addImage = () => {
+    if (!editor) return;
+    const url = window.prompt('URL da imagem (Você também pode arrastar e soltar imagens direto na nota!):');
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+  };
+
+  const addYoutubeVideo = () => {
+    if (!editor) return;
+    const url = window.prompt('URL do vídeo do YouTube:');
+    if (url) {
+      editor.commands.setYoutubeVideo({
+        src: url,
+        width: 640,
+        height: 480,
+      });
     }
   };
 
@@ -275,12 +368,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
         transition: 'background-color 0.3s',
       }}>
         
-        {/* TIPTAP HEADLESS TOOLBAR */}
+        {/* TIPTAP HEADLESS TOOLBAR (Avançada SOTA) */}
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
           px: 2, 
-          py: 1, 
+          py: 1.5, 
           gap: 1.5, 
           bgcolor: 'background.paper',
           borderBottom: '1px solid',
@@ -289,41 +382,184 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
         }}>
           {editor && (
             <>
-              {/* CONTROLE DE TAMANHO EXATO (SOTA) */}
-              <Typography variant="caption" fontWeight={700} color="text.secondary">TAMANHO (px):</Typography>
-              <TextField
+              {/* BLOCOS / HEADINGS */}
+              <Select
                 size="small"
-                value={customFontSize}
-                onChange={(e) => setCustomFontSize(e.target.value)}
-                onBlur={applyCustomFontSize}
-                onKeyDown={(e) => e.key === 'Enter' && applyCustomFontSize()}
-                sx={{ width: 70, '& .MuiInputBase-root': { height: 32 } }}
-                inputProps={{ type: 'number', min: 1 }}
-              />
+                value={
+                  editor.isActive('heading', { level: 1 }) ? 'h1' :
+                  editor.isActive('heading', { level: 2 }) ? 'h2' :
+                  editor.isActive('heading', { level: 3 }) ? 'h3' : 'p'
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'p') editor.chain().focus().setParagraph().run();
+                  if (val === 'h1') editor.chain().focus().toggleHeading({ level: 1 }).run();
+                  if (val === 'h2') editor.chain().focus().toggleHeading({ level: 2 }).run();
+                  if (val === 'h3') editor.chain().focus().toggleHeading({ level: 3 }).run();
+                }}
+                sx={{ height: 32, minWidth: 120 }}
+              >
+                <MenuItem value="p">Texto Normal</MenuItem>
+                <MenuItem value="h1">Título 1</MenuItem>
+                <MenuItem value="h2">Título 2</MenuItem>
+                <MenuItem value="h3">Título 3</MenuItem>
+              </Select>
 
               <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
 
-              <IconButton size="small" onClick={() => editor.chain().focus().toggleBold().run()} color={editor.isActive('bold') ? 'primary' : 'default'}>
-                <FormatBoldIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => editor.chain().focus().toggleItalic().run()} color={editor.isActive('italic') ? 'primary' : 'default'}>
-                <FormatItalicIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => editor.chain().focus().toggleUnderline().run()} color={editor.isActive('underline') ? 'primary' : 'default'}>
-                <FormatUnderlinedIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => editor.chain().focus().toggleStrike().run()} color={editor.isActive('strike') ? 'primary' : 'default'}>
-                <FormatStrikethroughIcon fontSize="small" />
-              </IconButton>
+              {/* TAMANHO EXATO */}
+              <Tooltip title="Tamanho da Fonte (px)">
+                <TextField
+                  size="small"
+                  value={customFontSize}
+                  onChange={(e) => setCustomFontSize(e.target.value)}
+                  onBlur={applyCustomFontSize}
+                  onKeyDown={(e) => e.key === 'Enter' && applyCustomFontSize()}
+                  sx={{ width: 60, '& .MuiInputBase-root': { height: 32 } }}
+                  inputProps={{ type: 'number', min: 1 }}
+                />
+              </Tooltip>
+
+              {/* CORES */}
+              <Tooltip title="Cor do Texto">
+                <Box sx={{ display: 'flex', alignItems: 'center', height: 32, px: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <input
+                    type="color"
+                    onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+                    value={editor.getAttributes('textStyle').color || '#000000'}
+                    style={{ border: 'none', background: 'transparent', width: 24, height: 24, cursor: 'pointer', padding: 0 }}
+                  />
+                </Box>
+              </Tooltip>
+
+              <Tooltip title="Cor de Fundo (Marca-texto)">
+                <Box sx={{ display: 'flex', alignItems: 'center', height: 32, px: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <input
+                    type="color"
+                    onChange={(e) => editor.chain().focus().toggleHighlight({ color: e.target.value }).run()}
+                    value={editor.getAttributes('highlight').color || '#ffffff'}
+                    style={{ border: 'none', background: 'transparent', width: 24, height: 24, cursor: 'pointer', padding: 0 }}
+                  />
+                </Box>
+              </Tooltip>
 
               <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
 
-              <IconButton size="small" onClick={() => editor.chain().focus().toggleBulletList().run()} color={editor.isActive('bulletList') ? 'primary' : 'default'}>
-                <FormatListBulletedIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => editor.chain().focus().toggleOrderedList().run()} color={editor.isActive('orderedList') ? 'primary' : 'default'}>
-                <FormatListNumberedIcon fontSize="small" />
-              </IconButton>
+              {/* ESTILOS BÁSICOS & SUB/SUPER */}
+              <Tooltip title="Negrito">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleBold().run()} color={editor.isActive('bold') ? 'primary' : 'default'}>
+                  <FormatBoldIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Itálico">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleItalic().run()} color={editor.isActive('italic') ? 'primary' : 'default'}>
+                  <FormatItalicIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Sublinhado">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleUnderline().run()} color={editor.isActive('underline') ? 'primary' : 'default'}>
+                  <FormatUnderlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Tachado">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleStrike().run()} color={editor.isActive('strike') ? 'primary' : 'default'}>
+                  <FormatStrikethroughIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Subscrito">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleSubscript().run()} color={editor.isActive('subscript') ? 'primary' : 'default'}>
+                  <SubscriptIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Sobrescrito">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleSuperscript().run()} color={editor.isActive('superscript') ? 'primary' : 'default'}>
+                  <SuperscriptIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title="Limpar Formatação">
+                <IconButton size="small" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} color="default">
+                  <FormatClearIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
+              <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
+
+              {/* ALINHAMENTO */}
+              <Tooltip title="Alinhar à Esquerda">
+                <IconButton size="small" onClick={() => editor.chain().focus().setTextAlign('left').run()} color={editor.isActive({ textAlign: 'left' }) ? 'primary' : 'default'}>
+                  <FormatAlignLeftIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Centralizar">
+                <IconButton size="small" onClick={() => editor.chain().focus().setTextAlign('center').run()} color={editor.isActive({ textAlign: 'center' }) ? 'primary' : 'default'}>
+                  <FormatAlignCenterIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Alinhar à Direita">
+                <IconButton size="small" onClick={() => editor.chain().focus().setTextAlign('right').run()} color={editor.isActive({ textAlign: 'right' }) ? 'primary' : 'default'}>
+                  <FormatAlignRightIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Justificar">
+                <IconButton size="small" onClick={() => editor.chain().focus().setTextAlign('justify').run()} color={editor.isActive({ textAlign: 'justify' }) ? 'primary' : 'default'}>
+                  <FormatAlignJustifyIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
+              <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
+
+              {/* LISTAS E BLOCOS */}
+              <Tooltip title="Lista com Marcadores">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleBulletList().run()} color={editor.isActive('bulletList') ? 'primary' : 'default'}>
+                  <FormatListBulletedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Lista Numerada">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleOrderedList().run()} color={editor.isActive('orderedList') ? 'primary' : 'default'}>
+                  <FormatListNumberedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Checklist (Interativo)">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleTaskList().run()} color={editor.isActive('taskList') ? 'primary' : 'default'}>
+                  <ChecklistIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Citação">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleBlockquote().run()} color={editor.isActive('blockquote') ? 'primary' : 'default'}>
+                  <FormatQuoteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Bloco de Código">
+                <IconButton size="small" onClick={() => editor.chain().focus().toggleCodeBlock().run()} color={editor.isActive('codeBlock') ? 'primary' : 'default'}>
+                  <CodeIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
+              <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
+
+              {/* MÍDIA E TABELAS */}
+              <Tooltip title={editor.isActive('link') ? "Remover Link" : "Adicionar Link"}>
+                <IconButton size="small" onClick={editor.isActive('link') ? () => editor.chain().focus().unsetLink().run() : setLink} color={editor.isActive('link') ? 'primary' : 'default'}>
+                  {editor.isActive('link') ? <LinkOffIcon fontSize="small" /> : <LinkIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Adicionar Imagem">
+                <IconButton size="small" onClick={addImage} color="default">
+                  <ImageIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Adicionar YouTube">
+                <IconButton size="small" onClick={addYoutubeVideo} color="default">
+                  <YouTubeIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Inserir Tabela (3x3)">
+                <IconButton size="small" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} color="default">
+                  <TableChartIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
             </>
           )}
         </Box>
@@ -346,13 +582,81 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
             float: 'left',
             height: 0,
             pointerEvents: 'none',
+          },
+          '& .tiptap blockquote': {
+            borderLeft: '3px solid #ccc',
+            marginLeft: 0,
+            paddingLeft: '1rem',
+            fontStyle: 'italic'
+          },
+          '& .tiptap pre': {
+            background: '#1e1e1e',
+            color: '#fff',
+            fontFamily: 'monospace',
+            padding: '1rem',
+            borderRadius: '0.5rem',
+          },
+          '& .tiptap code': {
+            background: 'rgba(0,0,0,0.1)',
+            padding: '0.2rem 0.4rem',
+            borderRadius: '0.25rem',
+          },
+          /* Estilos para Checklists */
+          '& .tiptap ul[data-type="taskList"]': {
+            listStyle: 'none',
+            padding: 0,
+          },
+          '& .tiptap ul[data-type="taskList"] p': {
+            margin: 0,
+          },
+          '& .tiptap li[data-type="taskItem"]': {
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.5rem',
+            marginBottom: '0.5rem'
+          },
+          '& .tiptap li[data-type="taskItem"] > label': {
+            marginTop: '0.2rem'
+          },
+          /* Estilos para Tabelas */
+          '& .tiptap table': {
+            borderCollapse: 'collapse',
+            margin: 0,
+            overflow: 'hidden',
+            tableLayout: 'fixed',
+            width: '100%',
+          },
+          '& .tiptap td, & .tiptap th': {
+            border: '2px solid #ced4da',
+            boxSizing: 'border-box',
+            minWidth: '1em',
+            padding: '6px 8px',
+            position: 'relative',
+            verticalAlign: 'top',
+          },
+          '& .tiptap th': {
+            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            fontWeight: 'bold',
+            textAlign: 'left',
+          },
+          /* Estilos para Imagens */
+          '& .tiptap img': {
+            maxWidth: '100%',
+            height: 'auto',
+            borderRadius: '8px',
+          },
+          /* Estilos para YouTube */
+          '& .tiptap iframe': {
+            border: 'none',
+            borderRadius: '8px',
+            maxWidth: '100%',
           }
         }}>
           <EditorContent editor={editor} style={{ height: '100%' }} />
         </Box>
       </Box>
 
-      {/* DIALOGS */}
+      {/* DIALOGS MANTIDOS IDENTICOS */}
       <Dialog open={settingsDialogOpen} onClose={() => setSettingsDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><SettingsIcon color="primary" /> Opções da Nota</DialogTitle>
         <DialogContent dividers>
