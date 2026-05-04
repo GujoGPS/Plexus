@@ -42,12 +42,12 @@ import YouTubeIcon from '@mui/icons-material/YouTube';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import FormatColorTextIcon from '@mui/icons-material/FormatColorText';
 import BorderColorIcon from '@mui/icons-material/BorderColor';
-import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'; // Ícone para o Toggle/Acordeão
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'; 
 
 // ============================================================================
 // TIPTAP V3 SOTA & EXTENSIONS 
 // ============================================================================
-import { useEditor, EditorContent, Extension, Node, mergeAttributes } from '@tiptap/react';
+import { useEditor, EditorContent, Extension, Node, mergeAttributes, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Underline } from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -69,7 +69,7 @@ import { Youtube } from '@tiptap/extension-youtube';
 import { Typography as TypographyExtension } from '@tiptap/extension-typography';
 
 // ============================================================================
-// TIPAGEM DE EXTENSÕES CUSTOMIZADAS
+// TIPAGEM E EXTENSÕES CUSTOMIZADAS
 // ============================================================================
 export interface FontSizeOptions {
   types: string[];
@@ -81,36 +81,30 @@ declare module '@tiptap/core' {
       setFontSize: (size: string) => ReturnType;
       unsetFontSize: () => ReturnType;
     };
-    details: {
-      setDetails: () => ReturnType;
+    accordion: {
+      setAccordion: () => ReturnType;
     };
   }
 }
 
-// 1. EXTENSÃO CUSTOMIZADA: Tamanho de Fonte Inline
+// 1. EXTENSÃO: Tamanho de Fonte Inline
 const CustomFontSize = Extension.create<FontSizeOptions>({
   name: 'customFontSize',
-  addOptions() {
-    return {
-      types: ['textStyle'],
-    };
-  },
+  addOptions() { return { types: ['textStyle'] }; },
   addGlobalAttributes() {
-    return [
-      {
-        types: this.options.types,
-        attributes: {
-          fontSize: {
-            default: null,
-            parseHTML: element => element.style.fontSize || null,
-            renderHTML: attributes => {
-              if (!attributes.fontSize) return {};
-              return { style: `font-size: ${attributes.fontSize}` };
-            },
+    return [{
+      types: this.options.types,
+      attributes: {
+        fontSize: {
+          default: null,
+          parseHTML: element => element.style.fontSize || null,
+          renderHTML: attributes => {
+            if (!attributes.fontSize) return {};
+            return { style: `font-size: ${attributes.fontSize}` };
           },
         },
       },
-    ];
+    }];
   },
   addCommands() {
     return {
@@ -120,39 +114,63 @@ const CustomFontSize = Extension.create<FontSizeOptions>({
   },
 });
 
-// 2. EXTENSÃO CUSTOMIZADA: Bloco Expansível (Toggle/Acordeão)
-const Details = Node.create({
-  name: 'details',
+// 2. EXTENSÃO: Bloco Expansível (React NodeView) - RESOLVE TODOS OS BUGS
+const AccordionComponent = ({ node, updateAttributes, deleteNode }: any) => {
+  return (
+    <NodeViewWrapper style={{ margin: '16px 0', border: '1px solid #e0e0e0', borderRadius: '8px', backgroundColor: '#fafafa', overflow: 'hidden' }}>
+      {/* Container "Imune" ao Tiptap (contentEditable false) */}
+      <div contentEditable={false} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', borderBottom: node.attrs.open ? '1px solid #e0e0e0' : 'none', backgroundColor: '#f1f1f1' }}>
+        <button 
+          onClick={() => updateAttributes({ open: !node.attrs.open })} 
+          style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '14px', marginRight: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '4px' }}
+        >
+          {node.attrs.open ? '▼' : '▶'}
+        </button>
+        <input 
+          type="text" 
+          value={node.attrs.title} 
+          onChange={e => updateAttributes({ title: e.target.value })} 
+          placeholder="Título do bloco..." 
+          style={{ flexGrow: 1, border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '16px', color: '#333' }}
+        />
+        <button onClick={deleteNode} style={{ cursor: 'pointer', background: 'none', border: 'none', color: '#d32f2f', padding: '4px', display: 'flex', alignItems: 'center' }}>
+          <DeleteIcon fontSize="small" />
+        </button>
+      </div>
+      {/* Container de Texto Livre (Permite digitar dentro) */}
+      <div style={{ display: node.attrs.open ? 'block' : 'none', padding: '16px', backgroundColor: '#ffffff' }}>
+        <NodeViewContent className="accordion-content" />
+      </div>
+    </NodeViewWrapper>
+  );
+};
+
+const Accordion = Node.create({
+  name: 'accordion',
   group: 'block',
-  content: 'summary block+', // Exige um summary seguido de blocos
-  defining: true,
+  content: 'block+',
+  addAttributes() {
+    return {
+      open: { default: true },
+      title: { default: 'Tópico Oculto' }
+    };
+  },
   parseHTML() {
-    return [{ tag: 'details' }];
+    return [{ tag: 'div[data-type="accordion"]' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['details', mergeAttributes(HTMLAttributes, { class: 'tiptap-details' }), 0];
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'accordion' }), 0];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(AccordionComponent);
   },
   addCommands() {
     return {
-      setDetails: () => ({ chain }) => {
-        return chain()
-          .insertContent('<details class="tiptap-details"><summary>Tópico Oculto (Clique para abrir)</summary><p>Escreva o conteúdo minimizado aqui...</p></details>')
-          .run();
-      },
+      setAccordion: () => ({ chain }) => {
+        return chain().insertContent({ type: 'accordion', content: [{ type: 'paragraph' }] }).run();
+      }
     };
-  },
-});
-
-const Summary = Node.create({
-  name: 'summary',
-  content: 'inline*',
-  isolating: true, // Evita que o backspace o mescle facilmente com o texto anterior
-  parseHTML() {
-    return [{ tag: 'summary' }];
-  },
-  renderHTML({ HTMLAttributes }) {
-    return ['summary', mergeAttributes(HTMLAttributes), 0];
-  },
+  }
 });
 
 import { useNotesStore } from '../../../stores/notesStore';
@@ -232,8 +250,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
       Subscript, Superscript,
       Youtube.configure({ controls: false, nocookie: true }),
       TypographyExtension,
-      Details, // Adicionando a nossa Extensão SOTA
-      Summary, // Adicionando a nossa Extensão SOTA
+      Accordion, // Nossa Extensão Perfeita Injetada!
     ],
     content: note.content || '',
     onSelectionUpdate: ({ editor }) => {
@@ -581,9 +598,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
 
               <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
 
-              {/* LISTAS E BLOCOS (INCLUI O NOVO TOGGLE) */}
+              {/* LISTAS E BLOCOS */}
               <Tooltip title="Bloco Expansível (Toggle)">
-                <IconButton size="small" onClick={() => editor.chain().focus().setDetails().run()} color="default">
+                <IconButton size="small" onClick={() => editor.chain().focus().setAccordion().run()} color="default">
                   <UnfoldMoreIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -678,13 +695,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
             padding: '0.2rem 0.4rem',
             borderRadius: '0.25rem',
           },
-          /* CSS CORRIGIDO: Identação real para Listas Padrão */
           '& .tiptap ul, & .tiptap ol': {
             paddingLeft: '24px',
             marginTop: '0.5rem',
             marginBottom: '0.5rem',
           },
-          /* Estilos isolados para Checklists */
           '& .tiptap ul[data-type="taskList"]': {
             listStyle: 'none',
             paddingLeft: '0', 
@@ -701,7 +716,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
           '& .tiptap li[data-type="taskItem"] > label': {
             marginTop: '0.2rem'
           },
-          /* Estilos para Tabelas */
           '& .tiptap table': {
             borderCollapse: 'collapse',
             margin: 0,
@@ -722,40 +736,16 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
             fontWeight: 'bold',
             textAlign: 'left',
           },
-          /* Estilos para Imagens */
           '& .tiptap img': {
             maxWidth: '100%',
             height: 'auto',
             borderRadius: '8px',
           },
-          /* Estilos para YouTube */
           '& .tiptap iframe': {
             border: 'none',
             borderRadius: '8px',
             maxWidth: '100%',
           },
-          /* Estilos para Toggle/Details (NOVO) */
-          '& .tiptap details.tiptap-details': {
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: '8px',
-            padding: '8px 12px',
-            margin: '12px 0',
-            backgroundColor: 'rgba(0,0,0,0.02)',
-          },
-          '& .tiptap details.tiptap-details summary': {
-            fontWeight: 700,
-            cursor: 'pointer',
-            outline: 'none',
-            fontSize: '1.1rem',
-            listStylePosition: 'inside', 
-          },
-          '& .tiptap details[open].tiptap-details summary': {
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            paddingBottom: '8px',
-            marginBottom: '8px',
-          }
         }}>
           <EditorContent editor={editor} style={{ height: '100%' }} />
         </Box>
