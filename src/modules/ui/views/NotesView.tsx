@@ -42,11 +42,12 @@ import YouTubeIcon from '@mui/icons-material/YouTube';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import FormatColorTextIcon from '@mui/icons-material/FormatColorText';
 import BorderColorIcon from '@mui/icons-material/BorderColor';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'; // Ícone para o Toggle/Acordeão
 
 // ============================================================================
 // TIPTAP V3 SOTA & EXTENSIONS 
 // ============================================================================
-import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import { useEditor, EditorContent, Extension, Node, mergeAttributes } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Underline } from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -67,7 +68,9 @@ import { Superscript } from '@tiptap/extension-superscript';
 import { Youtube } from '@tiptap/extension-youtube';
 import { Typography as TypographyExtension } from '@tiptap/extension-typography';
 
-// 1. Definição da Extensão Customizada SOTA v3 para Font Size inline
+// ============================================================================
+// TIPAGEM DE EXTENSÕES CUSTOMIZADAS
+// ============================================================================
 export interface FontSizeOptions {
   types: string[];
 }
@@ -78,9 +81,13 @@ declare module '@tiptap/core' {
       setFontSize: (size: string) => ReturnType;
       unsetFontSize: () => ReturnType;
     };
+    details: {
+      setDetails: () => ReturnType;
+    };
   }
 }
 
+// 1. EXTENSÃO CUSTOMIZADA: Tamanho de Fonte Inline
 const CustomFontSize = Extension.create<FontSizeOptions>({
   name: 'customFontSize',
   addOptions() {
@@ -97,12 +104,8 @@ const CustomFontSize = Extension.create<FontSizeOptions>({
             default: null,
             parseHTML: element => element.style.fontSize || null,
             renderHTML: attributes => {
-              if (!attributes.fontSize) {
-                return {};
-              }
-              return {
-                style: `font-size: ${attributes.fontSize}`,
-              };
+              if (!attributes.fontSize) return {};
+              return { style: `font-size: ${attributes.fontSize}` };
             },
           },
         },
@@ -111,13 +114,44 @@ const CustomFontSize = Extension.create<FontSizeOptions>({
   },
   addCommands() {
     return {
-      setFontSize: fontSize => ({ chain }) => {
-        return chain().setMark('textStyle', { fontSize }).run();
-      },
-      unsetFontSize: () => ({ chain }) => {
-        return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
+      setFontSize: fontSize => ({ chain }) => chain().setMark('textStyle', { fontSize }).run(),
+      unsetFontSize: () => ({ chain }) => chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run(),
+    };
+  },
+});
+
+// 2. EXTENSÃO CUSTOMIZADA: Bloco Expansível (Toggle/Acordeão)
+const Details = Node.create({
+  name: 'details',
+  group: 'block',
+  content: 'summary block+', // Exige um summary seguido de blocos
+  defining: true,
+  parseHTML() {
+    return [{ tag: 'details' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['details', mergeAttributes(HTMLAttributes, { class: 'tiptap-details' }), 0];
+  },
+  addCommands() {
+    return {
+      setDetails: () => ({ chain }) => {
+        return chain()
+          .insertContent('<details class="tiptap-details"><summary>Tópico Oculto (Clique para abrir)</summary><p>Escreva o conteúdo minimizado aqui...</p></details>')
+          .run();
       },
     };
+  },
+});
+
+const Summary = Node.create({
+  name: 'summary',
+  content: 'inline*',
+  isolating: true, // Evita que o backspace o mescle facilmente com o texto anterior
+  parseHTML() {
+    return [{ tag: 'summary' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['summary', mergeAttributes(HTMLAttributes), 0];
   },
 });
 
@@ -148,7 +182,6 @@ const PAGE_COLORS = [
   { id: 'sepia', hex: '#f4ecd8', name: 'Sépia' }
 ];
 
-// Paletas para os novos Popovers de Cor
 const PRESET_TEXT_COLORS = ['#000000', '#434343', '#666666', '#999999', '#cccccc', '#ea4335', '#fbbc04', '#34a853', '#4285f4', '#8e24aa', '#e67c73'];
 const PRESET_HIGHLIGHT_COLORS = ['#ffffff', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#ead1dc', '#ffff00', '#00ff00', '#00ffff'];
 
@@ -178,7 +211,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [toast, setToast] = useState({ open: false, msg: '', type: 'info' as any });
 
-  // Estados dos Menus de Cor
   const [textColorAnchor, setTextColorAnchor] = useState<null | HTMLElement>(null);
   const [highlightAnchor, setHighlightAnchor] = useState<null | HTMLElement>(null);
 
@@ -192,31 +224,16 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
       Color,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        defaultProtocol: 'https',
-      }),
-      Table.configure({
-        resizable: true,
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      Image.configure({
-        allowBase64: true,
-      }),
-      TaskList,
-      TaskItem.configure({
-        nested: true,
-      }),
-      Subscript,
-      Superscript,
-      Youtube.configure({
-        controls: false,
-        nocookie: true,
-      }),
+      Link.configure({ openOnClick: false, autolink: true, defaultProtocol: 'https' }),
+      Table.configure({ resizable: true }),
+      TableRow, TableHeader, TableCell,
+      Image.configure({ allowBase64: true }),
+      TaskList, TaskItem.configure({ nested: true }),
+      Subscript, Superscript,
+      Youtube.configure({ controls: false, nocookie: true }),
       TypographyExtension,
+      Details, // Adicionando a nossa Extensão SOTA
+      Summary, // Adicionando a nossa Extensão SOTA
     ],
     content: note.content || '',
     onSelectionUpdate: ({ editor }) => {
@@ -295,9 +312,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
     if (!editor) return;
     const previousUrl = editor.getAttributes('link').href;
     const url = window.prompt('URL do link:', previousUrl);
-
     if (url === null) return; 
-
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
@@ -317,11 +332,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
     if (!editor) return;
     const url = window.prompt('URL do vídeo do YouTube:');
     if (url) {
-      editor.commands.setYoutubeVideo({
-        src: url,
-        width: 640,
-        height: 480,
-      });
+      editor.commands.setYoutubeVideo({ src: url, width: 640, height: 480 });
     }
   };
 
@@ -340,7 +351,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
         boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
         position: 'sticky',
         top: 0,
-        zIndex: 110 // Fica sempre por cima
+        zIndex: 110 
       }}>
         <Tooltip title="Salvar e Voltar">
           <IconButton onClick={saveAndClose} color="primary" sx={{ bgcolor: 'primary.light', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.main' } }}>
@@ -400,7 +411,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
           flexWrap: 'wrap',
           position: 'sticky',
           top: 0, 
-          zIndex: 100 // Fica fixa ao rolar o conteúdo
+          zIndex: 100 
         }}>
           {editor && (
             <>
@@ -570,7 +581,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
 
               <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
 
-              {/* LISTAS E BLOCOS */}
+              {/* LISTAS E BLOCOS (INCLUI O NOVO TOGGLE) */}
+              <Tooltip title="Bloco Expansível (Toggle)">
+                <IconButton size="small" onClick={() => editor.chain().focus().setDetails().run()} color="default">
+                  <UnfoldMoreIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
               <Tooltip title="Lista com Marcadores">
                 <IconButton size="small" onClick={() => editor.chain().focus().toggleBulletList().run()} color={editor.isActive('bulletList') ? 'primary' : 'default'}>
                   <FormatListBulletedIcon fontSize="small" />
@@ -717,6 +733,28 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
             border: 'none',
             borderRadius: '8px',
             maxWidth: '100%',
+          },
+          /* Estilos para Toggle/Details (NOVO) */
+          '& .tiptap details.tiptap-details': {
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            margin: '12px 0',
+            backgroundColor: 'rgba(0,0,0,0.02)',
+          },
+          '& .tiptap details.tiptap-details summary': {
+            fontWeight: 700,
+            cursor: 'pointer',
+            outline: 'none',
+            fontSize: '1.1rem',
+            listStylePosition: 'inside', 
+          },
+          '& .tiptap details[open].tiptap-details summary': {
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            paddingBottom: '8px',
+            marginBottom: '8px',
           }
         }}>
           <EditorContent editor={editor} style={{ height: '100%' }} />
