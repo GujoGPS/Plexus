@@ -26,12 +26,11 @@ import { aiService } from '../../../services/AIService';
 import { Note } from '../../../types';
 
 // ============================================================================
-// REGISTRAR TAMANHOS PERSONALIZADOS EXATOS NO QUILL (SOTA)
-// Permite mudar o tamanho palavra por palavra sem afetar a linha toda
+// HACK SOTA: FORÇAR O QUILL A USAR INLINE STYLES PARA TAMANHO SEM RESTRIÇÕES
 // ============================================================================
-const Size = Quill.import('attributors/style/size');
-Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px', '48px', '64px', '72px'];
-Quill.register(Size, true);
+const SizeStyle = Quill.import('attributors/style/size');
+SizeStyle.whitelist = null; // Removendo a whitelist permite QUALQUER valor (ex: 24px, 13px)
+Quill.register(SizeStyle, true);
 
 // ============================================================================
 // CONSTANTES & DESIGN
@@ -62,7 +61,7 @@ interface NoteEditorProps {
 }
 
 // ============================================================================
-// MOTOR DE EDIÇÃO MODERNO (ReactQuill)
+// MOTOR DE EDIÇÃO MODERNO (ReactQuill customizado)
 // ============================================================================
 const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete }) => {
   const { tasks, loadTasks } = useTasksStore();
@@ -74,6 +73,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
   const [tempTitle, setTempTitle] = useState('');
   const [pageColor, setPageColor] = useState<string>(note.pageColor || '#ffffff');
   const [linkedTaskId, setLinkedTaskId] = useState(note.linkedTaskId || '');
+
+  // Estado para o tamanho customizado da fonte
+  const [customFontSize, setCustomFontSize] = useState<string>('16');
 
   const [aiLoading, setAiLoading] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -137,18 +139,48 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
     }
   };
 
-  // Configuração nativa e poderosa do Quill
+  // ============================================================================
+  // HANDLERS PARA O TAMANHO DA FONTE CUSTOMIZADO
+  // ============================================================================
+  const applyCustomFontSize = () => {
+    const quill = reactQuillRef.current?.getEditor();
+    if (quill && customFontSize) {
+      // Aplica o formato SOTA usando pixels em linha
+      quill.format('size', `${customFontSize}px`);
+    }
+  };
+
+  const handleFontSizeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomFontSize(e.target.value);
+  };
+
+  const handleFontSizeKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      applyCustomFontSize();
+    }
+  };
+
+  const handleSelectionChange = (range: any, source: string, editor: any) => {
+    if (range) {
+      const format = editor.getFormat(range);
+      if (format.size) {
+        setCustomFontSize(format.size.replace('px', ''));
+      } else {
+        setCustomFontSize('16'); // Fallback padrão
+      }
+    }
+  };
+
+  // Configuração nativa e poderosa do Quill, REMOVENDO header e size padrões
   const modules = useMemo(() => ({
     toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      [{ 'size': Size.whitelist }],
       ['bold', 'italic', 'underline', 'strike'],
       [{ 'color': [] }, { 'background': [] }],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
       [{ 'align': [] }],
       ['blockquote', 'code-block'],
       ['link', 'image'],
-      ['clean'] // Remover formatação
+      ['clean'] 
     ]
   }), []);
 
@@ -213,6 +245,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
           borderBottom: '1px solid',
           borderColor: 'divider',
           fontFamily: 'inherit',
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap'
         },
         '& .ql-container': {
           border: 'none',
@@ -226,7 +261,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
           padding: '32px',
           color: (theme) => theme.palette.text.primary,
         },
-        // Estilização p/ suporte a Dark/Light Mode no Quill
         '& .ql-picker-label, & .ql-picker-item': {
           color: (theme) => theme.palette.text.primary,
         },
@@ -240,11 +274,35 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
           backgroundColor: (theme) => theme.palette.background.paper,
         }
       }}>
+        {/* NOSSO CONTROLE CUSTOMIZADO DE TAMANHO DA FONTE */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          px: 2, 
+          py: 1, 
+          gap: 1.5, 
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider'
+        }}>
+          <Typography variant="caption" fontWeight={700} color="text.secondary">TAMANHO (px):</Typography>
+          <TextField
+            size="small"
+            value={customFontSize}
+            onChange={handleFontSizeInput}
+            onBlur={applyCustomFontSize}
+            onKeyDown={handleFontSizeKeyDown}
+            sx={{ width: 70, '& .MuiInputBase-root': { height: 32 } }}
+            inputProps={{ type: 'number', min: 1 }}
+          />
+        </Box>
+
         <ReactQuill
           ref={reactQuillRef}
           theme="snow"
           value={content}
           onChange={setContent}
+          onChangeSelection={handleSelectionChange}
           modules={modules}
         />
       </Box>
