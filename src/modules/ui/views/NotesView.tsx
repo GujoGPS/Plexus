@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box, Paper, Typography, CircularProgress, IconButton, Grid, Card, CardActionArea,
   TextField, Tooltip, Divider, Button, Snackbar, Alert, FormControl, InputAdornment, Dialog,
@@ -16,21 +16,83 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 
-import ReactQuill, { Quill } from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import FormatBoldIcon from '@mui/icons-material/FormatBold';
+import FormatItalicIcon from '@mui/icons-material/FormatItalic';
+import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined';
+import FormatStrikethroughIcon from '@mui/icons-material/FormatStrikethrough';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+
+// ============================================================================
+// TIPTAP V3 SOTA & EXTENSIONS
+// ============================================================================
+import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
+import TextAlign from '@tiptap/extension-text-align';
+
+// 1. Definição da Extensão Customizada SOTA v3 para Font Size inline
+export interface FontSizeOptions {
+  types: string[];
+}
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    fontSize: {
+      setFontSize: (size: string) => ReturnType;
+      unsetFontSize: () => ReturnType;
+    };
+  }
+}
+
+const CustomFontSize = Extension.create<FontSizeOptions>({
+  name: 'customFontSize',
+  addOptions() {
+    return {
+      types: ['textStyle'],
+    };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: element => element.style.fontSize || null,
+            renderHTML: attributes => {
+              if (!attributes.fontSize) {
+                return {};
+              }
+              return {
+                style: `font-size: ${attributes.fontSize}`,
+              };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontSize: fontSize => ({ chain }) => {
+        return chain().setMark('textStyle', { fontSize }).run();
+      },
+      unsetFontSize: () => ({ chain }) => {
+        return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
+      },
+    };
+  },
+});
 
 import { useNotesStore } from '../../../stores/notesStore';
 import { useTasksStore } from '../../../stores/tasksStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { aiService } from '../../../services/AIService';
 import { Note } from '../../../types';
-
-// ============================================================================
-// HACK SOTA: FORÇAR O QUILL A USAR INLINE STYLES PARA TAMANHO SEM RESTRIÇÕES
-// ============================================================================
-const SizeStyle = Quill.import('attributors/style/size');
-SizeStyle.whitelist = null; // Removendo a whitelist permite QUALQUER valor (ex: 24px, 13px)
-Quill.register(SizeStyle, true);
 
 // ============================================================================
 // CONSTANTES & DESIGN
@@ -61,28 +123,45 @@ interface NoteEditorProps {
 }
 
 // ============================================================================
-// MOTOR DE EDIÇÃO MODERNO (ReactQuill customizado)
+// EDITOR COM TIPTAP V3
 // ============================================================================
 const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete }) => {
   const { tasks, loadTasks } = useTasksStore();
   const navigateToItem = useUiStore((state) => state.navigateToItem);
 
-  const [content, setContent] = useState(note.content || '');
   const [title, setTitle] = useState(note.title || '');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState('');
   const [pageColor, setPageColor] = useState<string>(note.pageColor || '#ffffff');
   const [linkedTaskId, setLinkedTaskId] = useState(note.linkedTaskId || '');
 
-  // Estado para o tamanho customizado da fonte
   const [customFontSize, setCustomFontSize] = useState<string>('16');
-
   const [aiLoading, setAiLoading] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [toast, setToast] = useState({ open: false, msg: '', type: 'info' as any });
 
-  const reactQuillRef = useRef<ReactQuill>(null);
+  // INICIALIZAÇÃO TIPTAP
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      TextStyle, 
+      CustomFontSize,
+      Color,
+      Highlight.configure({ multicolor: true }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    ],
+    content: note.content || '',
+    onSelectionUpdate: ({ editor }) => {
+      const size = editor.getAttributes('textStyle').fontSize;
+      if (size) {
+        setCustomFontSize(size.replace('px', ''));
+      } else {
+        setCustomFontSize('16'); // Fallback visual
+      }
+    },
+  });
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
 
@@ -92,10 +171,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
   };
 
   const saveAndClose = () => {
+    const htmlContent = editor?.getHTML() || '';
     onSave(note.id, {
       title,
-      content,
-      canvasData: '', // Limpando legado do canvas se houver
+      content: htmlContent,
+      canvasData: '', // Limpando legado do canvas
       linkedTaskId,
       pageColor
     });
@@ -114,7 +194,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
   };
 
   const handleAI = async () => {
-    const text = reactQuillRef.current?.getEditor().getText() || '';
+    if (!editor) return;
+    const text = editor.getText();
 
     if (!text.trim()) {
       setToast({ open: true, msg: 'A nota está vazia!', type: 'warning' });
@@ -126,11 +207,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
       const summary = await aiService.summarize(text);
       const aiHtml = `<br/><br/><blockquote style="background:#e3f2fd; padding:15px; border-radius:8px; border-left:4px solid #1976d2; margin: 0;"><strong>✨ Resumo da IA:</strong><br/>${summary}</blockquote><br/>`;
 
-      const quill = reactQuillRef.current?.getEditor();
-      if (quill) {
-        const length = quill.getLength();
-        quill.clipboard.dangerouslyPasteHTML(length, aiHtml);
-      }
+      editor.chain().focus().insertContentAt(editor.state.doc.content.size, aiHtml).run();
       setToast({ open: true, msg: 'IA analisou sua nota!', type: 'success' });
     } catch (err: any) {
       setToast({ open: true, msg: err.message || 'Erro ao conectar com a IA.', type: 'error' });
@@ -139,55 +216,19 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
     }
   };
 
-  // ============================================================================
-  // HANDLERS PARA O TAMANHO DA FONTE CUSTOMIZADO
-  // ============================================================================
   const applyCustomFontSize = () => {
-    const quill = reactQuillRef.current?.getEditor();
-    if (quill && customFontSize) {
-      // Aplica o formato SOTA usando pixels em linha
-      quill.format('size', `${customFontSize}px`);
+    if (!editor) return;
+    if (customFontSize) {
+      editor.chain().focus().setFontSize(`${customFontSize}px`).run();
+    } else {
+      editor.chain().focus().unsetFontSize().run();
     }
   };
-
-  const handleFontSizeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomFontSize(e.target.value);
-  };
-
-  const handleFontSizeKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      applyCustomFontSize();
-    }
-  };
-
-  const handleSelectionChange = (range: any, source: string, editor: any) => {
-    if (range) {
-      const format = editor.getFormat(range);
-      if (format.size) {
-        setCustomFontSize(format.size.replace('px', ''));
-      } else {
-        setCustomFontSize('16'); // Fallback padrão
-      }
-    }
-  };
-
-  // Configuração nativa e poderosa do Quill, REMOVENDO header e size padrões
-  const modules = useMemo(() => ({
-    toolbar: [
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
-      [{ 'align': [] }],
-      ['blockquote', 'code-block'],
-      ['link', 'image'],
-      ['clean'] 
-    ]
-  }), []);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       
-      {/* TOOLBAR PRINCIPAL MESTRA */}
+      {/* TOOLBAR PRINCIPAL */}
       <Paper sx={{ p: 1, mb: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
         <Tooltip title="Salvar e Voltar">
           <IconButton onClick={saveAndClose} color="primary" sx={{ bgcolor: 'primary.light', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.main' } }}>
@@ -210,7 +251,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
         
         <Box sx={{ flexGrow: 1 }} />
         
-        {/* ENGRENAGEM DE CONFIGURAÇÕES GERAIS E IA */}
         <Tooltip title="Resumir com IA">
           <IconButton onClick={handleAI} disabled={aiLoading} sx={{ bgcolor: 'action.hover', color: 'secondary.main', mr: 1 }}>
             {aiLoading ? <CircularProgress size={20} /> : <AutoFixHighIcon />}
@@ -223,7 +263,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
         </Tooltip>
       </Paper>
 
-      {/* EDITOR RICH TEXT PROFISSIONAL */}
+      {/* EDITOR COM TIPTAP */}
       <Box sx={{ 
         flexGrow: 1, 
         display: 'flex', 
@@ -233,48 +273,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
         overflow: 'hidden', 
         boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.08)', 
         transition: 'background-color 0.3s',
-        '& .quill': {
-          display: 'flex',
-          flexDirection: 'column',
-          flexGrow: 1,
-          height: '100%',
-        },
-        '& .ql-toolbar': {
-          bgcolor: (theme) => theme.palette.background.paper,
-          border: 'none',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          fontFamily: 'inherit',
-          display: 'flex',
-          alignItems: 'center',
-          flexWrap: 'wrap'
-        },
-        '& .ql-container': {
-          border: 'none',
-          flexGrow: 1,
-          overflowY: 'auto',
-          fontSize: '16px',
-          fontFamily: 'inherit',
-        },
-        '& .ql-editor': {
-          minHeight: '100%',
-          padding: '32px',
-          color: (theme) => theme.palette.text.primary,
-        },
-        '& .ql-picker-label, & .ql-picker-item': {
-          color: (theme) => theme.palette.text.primary,
-        },
-        '& .ql-stroke': {
-          stroke: (theme) => theme.palette.text.primary,
-        },
-        '& .ql-fill': {
-          fill: (theme) => theme.palette.text.primary,
-        },
-        '& .ql-snow .ql-picker-options': {
-          backgroundColor: (theme) => theme.palette.background.paper,
-        }
       }}>
-        {/* NOSSO CONTROLE CUSTOMIZADO DE TAMANHO DA FONTE */}
+        
+        {/* TIPTAP HEADLESS TOOLBAR */}
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -283,36 +284,79 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
           gap: 1.5, 
           bgcolor: 'background.paper',
           borderBottom: '1px solid',
-          borderColor: 'divider'
+          borderColor: 'divider',
+          flexWrap: 'wrap'
         }}>
-          <Typography variant="caption" fontWeight={700} color="text.secondary">TAMANHO (px):</Typography>
-          <TextField
-            size="small"
-            value={customFontSize}
-            onChange={handleFontSizeInput}
-            onBlur={applyCustomFontSize}
-            onKeyDown={handleFontSizeKeyDown}
-            sx={{ width: 70, '& .MuiInputBase-root': { height: 32 } }}
-            inputProps={{ type: 'number', min: 1 }}
-          />
+          {editor && (
+            <>
+              {/* CONTROLE DE TAMANHO EXATO (SOTA) */}
+              <Typography variant="caption" fontWeight={700} color="text.secondary">TAMANHO (px):</Typography>
+              <TextField
+                size="small"
+                value={customFontSize}
+                onChange={(e) => setCustomFontSize(e.target.value)}
+                onBlur={applyCustomFontSize}
+                onKeyDown={(e) => e.key === 'Enter' && applyCustomFontSize()}
+                sx={{ width: 70, '& .MuiInputBase-root': { height: 32 } }}
+                inputProps={{ type: 'number', min: 1 }}
+              />
+
+              <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
+
+              <IconButton size="small" onClick={() => editor.chain().focus().toggleBold().run()} color={editor.isActive('bold') ? 'primary' : 'default'}>
+                <FormatBoldIcon fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => editor.chain().focus().toggleItalic().run()} color={editor.isActive('italic') ? 'primary' : 'default'}>
+                <FormatItalicIcon fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => editor.chain().focus().toggleUnderline().run()} color={editor.isActive('underline') ? 'primary' : 'default'}>
+                <FormatUnderlinedIcon fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => editor.chain().focus().toggleStrike().run()} color={editor.isActive('strike') ? 'primary' : 'default'}>
+                <FormatStrikethroughIcon fontSize="small" />
+              </IconButton>
+
+              <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
+
+              <IconButton size="small" onClick={() => editor.chain().focus().toggleBulletList().run()} color={editor.isActive('bulletList') ? 'primary' : 'default'}>
+                <FormatListBulletedIcon fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => editor.chain().focus().toggleOrderedList().run()} color={editor.isActive('orderedList') ? 'primary' : 'default'}>
+                <FormatListNumberedIcon fontSize="small" />
+              </IconButton>
+            </>
+          )}
         </Box>
 
-        <ReactQuill
-          ref={reactQuillRef}
-          theme="snow"
-          value={content}
-          onChange={setContent}
-          onChangeSelection={handleSelectionChange}
-          modules={modules}
-        />
+        {/* ÁREA DE DIGITAÇÃO TIPTAP */}
+        <Box sx={{
+          flexGrow: 1,
+          overflowY: 'auto',
+          p: 4,
+          '& .tiptap': {
+            outline: 'none',
+            minHeight: '100%',
+            color: (theme) => theme.palette.text.primary,
+            fontSize: '16px', 
+            lineHeight: 1.6,
+          },
+          '& .tiptap p.is-editor-empty:first-child::before': {
+            content: 'attr(data-placeholder)',
+            color: 'text.secondary',
+            float: 'left',
+            height: 0,
+            pointerEvents: 'none',
+          }
+        }}>
+          <EditorContent editor={editor} style={{ height: '100%' }} />
+        </Box>
       </Box>
 
-      {/* DIALOG DE CONFIGURAÇÕES GERAIS DA NOTA */}
+      {/* DIALOGS */}
       <Dialog open={settingsDialogOpen} onClose={() => setSettingsDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><SettingsIcon color="primary" /> Opções da Nota</DialogTitle>
         <DialogContent dividers>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
-            
             <Box>
               <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ mb: 1, display: 'block' }}>COR DA PÁGINA (FUNDO)</Typography>
               <Box sx={{ display: 'flex', gap: 2 }}>
@@ -364,7 +408,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onBack, onSave, onDelete 
 };
 
 // ============================================================================
-// VIEW PRINCIPAL: A BIBLIOTECA DE CADERNOS
+// MAIN VIEW E DIALOGS DE CARDS
 // ============================================================================
 const NotesView: React.FC = () => {
   const { notes, isLoading, loadNotes, addNote, updateNote, deleteNote } = useNotesStore();
